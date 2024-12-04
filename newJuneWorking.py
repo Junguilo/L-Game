@@ -247,46 +247,98 @@ class gameState:
 
         bestScore = float('-inf')
         bestAction = None
+        alpha = float('-inf')
+        beta = float('inf')
+
+
         for action in self.checkPossible(player = player):
             nextGameState = gameState(self)
             nextGameState.play(*action, changeTurn = False, player = player)
             nextGameState.turn = (player + 1) % 2
-            score = nextGameState.minimax(depth - 1, player = (player + 1) % 2)
+
+            score = nextGameState.minimax(depth - 1, alpha, beta, player = (player + 1) % 2)
             print(f"Evaluated action {action} with score {score}")
+            
             if score > bestScore:
                 bestScore = score
                 bestAction = action
+            alpha = max(alpha, bestScore)
+
         return bestAction
 
-    def minimax(self, depth, player = None):
+    def minimax(self, depth, alpha=float('-inf'), beta=float('inf'), player = None):
         if player is None:
             player = self.turn
 
         if self.isGameOver() or depth == 0:
             return self.evaluate()
+        
         if player == 1:  #The Maximizing Player (usually AI)
-            return self.Max(depth, player)
+            return self.Max(depth, alpha, beta, player)
         else:
-            return self.Min(depth, player)
+            return self.Min(depth,alpha, beta, player)
 
-    def Max(self, depth, player):
+    def Max(self, depth, alpha, beta, player):
         maxScore = float('-inf')
-        for action in self.checkPossible(player = player):
+
+        possibleMoves = self.checkPossible(player=player)
+        # # Evaluate and sort moves
+        # scoredMoves = []
+        # for action in possibleMoves:
+        #     nextGameState = gameState(self)
+        #     nextGameState.play(*action, changeTurn=False, player=player)
+        #     score = nextGameState.evaluate()
+        #     scoredMoves.append((score, action))
+
+        # # Sort in descending order
+        # scoredMoves.sort(reverse=True)
+
+
+        for action in possibleMoves:
             nextGameState = gameState(self)
+            #print(action)
             nextGameState.play(*action, changeTurn = False, player = player)
             nextGameState.turn = (player + 1) % 2
             score = nextGameState.minimax(depth - 1, player = (player + 1) % 2)
             maxScore = max(maxScore, score)
+            alpha = max(alpha, maxScore)
+
+            #prune
+            if beta <= alpha:
+                break
+
         return maxScore
 
-    def Min(self, depth, player):
+    def Min(self, depth, alpha, beta, player):
         minScore = float('inf')
-        for action in self.checkPossible(player=player):
+
+        possibleMoves = self.checkPossible(player=player)
+        # # Evaluate and sort moves
+        # scoredMoves = []
+        # for action in possibleMoves:
+        #     nextGameState = gameState(self)
+        #     nextGameState.play(*action, changeTurn=False, player=player)
+        #     score = nextGameState.evaluate()
+        #     scoredMoves.append((score, action))
+
+        # # Sort in ascending order
+        # scoredMoves.sort()
+        # #print("MIN", scoredMoves)
+
+
+        for action in possibleMoves:
             nextGameState = gameState(self)
+            #print(action)
             nextGameState.play(*action, changeTurn=False, player=player)
             nextGameState.turn = (player + 1) % 2
             score = nextGameState.minimax(depth - 1, player = (player + 1) % 2)
             minScore = min(minScore, score)
+
+            beta = min(beta, minScore)
+
+            if beta <= alpha:
+                break
+
         return minScore
 
     def evaluate(self):
@@ -306,7 +358,7 @@ class gameState:
                 return False
             print("Possible Moves:", possibleMoves, '\n', "Possible Moves:" , possibleMovesLen)
             print("Player ", self.turn + 1, " turn: ")
-
+            self.visualize()
             #input
             inp = input("Enter your input:").split()
             if len(inp) == 3:
@@ -319,7 +371,7 @@ class gameState:
                 #NposX, NposY, NewNposX, NewNposY = input
                 self.play(posX, posY, dir, NposX, NposY, NewNposX, NewNposY)
             #gotta add possible moves the player or the amount of moves the player can have
-            self.visualize()
+            #self.visualize()
         pass
 
     #Human V AI
@@ -374,18 +426,18 @@ class gameState:
             action = self.getAction(depth = 2, player = self.turn)
             if action:
                 self.play(*action, player = self.turn)
-                print(f"AI {self.turn} plays: {action}")
-            else:
-                print(f"AI {self.turn + 1} has no moves left. AI {((self.turn + 1) % 2) + 1} wins!")
-                break
+                print(f"AI {self.turn + 1} plays: {action}")
+            # else:
+            #     print(f"AI {self.turn + 1} has no moves left. AI {((self.turn + 1) % 2) + 1} wins!")
+            #     break
 
 
 #init game state
 game = gameState()
 #game.visualize()
-game.playHumanVsAI()
+#game.playHumanVsAI()
 #game.playGame()
-#game.playAIVsAI()
+game.playAIVsAI()
 
 
 #To lose we play
