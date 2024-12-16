@@ -9,6 +9,7 @@ class gameState:
             self.turn = prevState.turn
         else:
             self.initialize()
+            
     def initialize(self):
         self.empty = set([(1,4),(2,1),(2,4),(3,1),(3,4),(4,1)])
         self.full = set([(1,1),(1,2),(1,3),(2,2),(2,3),(3,2),(3,3),(4,2),(4,3),(4,4)])
@@ -56,7 +57,6 @@ class gameState:
         
         #print(Lshape)
         return Lshape 
-    
 
     #will be used for the minimax, && 
     #Our win condition will be if the other player has 0 moves left in the board
@@ -80,66 +80,31 @@ class gameState:
                 return False
         
         #Checks if its the same as the old position now that we see that the new position is valid
-        #clear old Lshape pos in prep for new pos
-        for pos in oldLshape:
-            self.empty.add(pos)
-            self.full.discard(pos)
-        #needs to place old Lshape back before every false
+        occupiedPos = self.full - oldLshape
 
         #Checks if newpos is occupying any areas
-        for pos in newLshape:
-            if pos in self.full:
-                #print("Cannot move to occupied area")
-
-                #restore old Lshape
-                for pos in oldLshape:
-                    self.empty.discard(pos)
-                    self.full.add(pos)
-                return False
+        if newLshape & occupiedPos:
+            return False
 
         #make sure new Lshape is different than old, not in any full spots, or the same as the other shape
         if newLshape == oldLshape:
-            #restore old Lshape if move fails
-            for pos in oldLshape:
-                self.empty.discard(pos)
-                self.full.add(pos)
             return False
 
         # Check neutral piece validity, if provided
-        if old1 and old2:
+        if all(v is not None for v in [old1, old2, new1, new2]):
             if not (1 <= new1 <= 4 and 1 <= new2 <= 4):
-                #print("Coordinates for new neutral piece out of bounds.")
-                #restore lshape
-                for pos in oldLshape:
-                    self.empty.discard(pos)
-                    self.full.add(pos)
                 return False
-            if (new1, new2) in self.full:
-                #print("Neutral piece cannot be placed inside another piece.")
-                #restore lshape
-                for pos in oldLshape:
-                    self.empty.discard(pos)
-                    self.full.add(pos)
+            if (new1, new2) in occupiedPos:
                 return False
             if (old1, old2) not in self.neutrals:
-                #print("Original neutral piece position is invalid.")
-                #restore lshape
-                for pos in oldLshape:
-                    self.empty.discard(pos)
-                    self.full.add(pos)
                 return False
-            for pos in newLshape:
-                if (new1, new2) == pos:
-                    #restore lshape
-                    for pos in oldLshape:
-                        self.empty.discard(pos)
-                        self.full.add(pos)
-                    return False
+            if (new1, new2) in newLshape:
+                return False
 
         #restore old Lshape, since this is just a check, it will be modified in the play function
-        for pos in oldLshape:
-            self.empty.discard(pos)
-            self.full.add(pos)
+        # for pos in oldLshape:
+        #     self.empty.discard(pos)
+        #     self.full.add(pos)
 
         
         return True
@@ -206,6 +171,7 @@ class gameState:
                 if self.checkValid(pos[0], pos[1], dir, player=player):
                     possibleMoves.append((pos[0], pos[1], dir))
 
+                #Add the ability for AI to neutrals, if we do not want neutrals remove this.
                 for neutral in self.neutrals:
                     old1, old2 = neutral
                     for new_pos in self.empty:
@@ -223,7 +189,7 @@ class gameState:
         for i in range(1,5): # y board
             for j in range(1,5): # x board
                 if (j,i) in self.empty:
-                    print('#  ', end='')
+                    print('.  ', end='')
                 if (j,i) in self.Lshapes[0]:
                     print('1  ', end='')
                 if (j,i) in self.Lshapes[1]:
@@ -238,10 +204,7 @@ class gameState:
     def isGameOver(self):
         return len(self.checkPossible()) == 0
 
-
-    #Currently this only works for Player vs AI 
-    # The CheckPossible is hardcoded
-    def getAction(self, depth=3, player = None):
+    def getAction(self, depth=2, player = None):
         if player is None:
             player = self.turn
 
@@ -257,7 +220,7 @@ class gameState:
             nextGameState.turn = (player + 1) % 2
 
             score = nextGameState.minimax(depth - 1, alpha, beta, player = (player + 1) % 2)
-            print(f"Evaluated action {action} with score {score}")
+            #print(f"Evaluated action {action} with score {score}")
             
             if score > bestScore:
                 bestScore = score
@@ -282,17 +245,6 @@ class gameState:
         maxScore = float('-inf')
 
         possibleMoves = self.checkPossible(player=player)
-        # # Evaluate and sort moves
-        # scoredMoves = []
-        # for action in possibleMoves:
-        #     nextGameState = gameState(self)
-        #     nextGameState.play(*action, changeTurn=False, player=player)
-        #     score = nextGameState.evaluate()
-        #     scoredMoves.append((score, action))
-
-        # # Sort in descending order
-        # scoredMoves.sort(reverse=True)
-
 
         for action in possibleMoves:
             nextGameState = gameState(self)
@@ -311,20 +263,7 @@ class gameState:
 
     def Min(self, depth, alpha, beta, player):
         minScore = float('inf')
-
         possibleMoves = self.checkPossible(player=player)
-        # # Evaluate and sort moves
-        # scoredMoves = []
-        # for action in possibleMoves:
-        #     nextGameState = gameState(self)
-        #     nextGameState.play(*action, changeTurn=False, player=player)
-        #     score = nextGameState.evaluate()
-        #     scoredMoves.append((score, action))
-
-        # # Sort in ascending order
-        # scoredMoves.sort()
-        # #print("MIN", scoredMoves)
-
 
         for action in possibleMoves:
             nextGameState = gameState(self)
@@ -375,7 +314,19 @@ class gameState:
         pass
 
     #Human V AI
+    #Human V AI
     def playHumanVsAI(self):
+
+        #Choose whether the player or the AI will go first. 
+        inp = input("Would you like the AI to go first? Y or N?\n")
+        
+        aiTurn = False
+        playTurn = 0
+        if inp == 'Y' or inp == 'y':
+            # self.turn = (self.turn+1) % 2
+            playTurn = 1
+            aiTurn = True
+
         while True:
             #Game Print Statements
             possibleMoves = game.checkPossible()
@@ -384,27 +335,34 @@ class gameState:
                 print("Player ", ((self.turn + 1) % 2) + 1, " Has Won!, Player ", ((self.turn + 2) % 2)+1, "has no available moves!")
                 return False
             print("Possible Moves:", possibleMoves, '\n', "Possible Moves:" , possibleMovesLen)
+
             print("Player ", self.turn + 1, " turn: ")
 
             self.visualize()
 
-            if self.turn == 0:  # Human player
+            # if self.turn == 0:  # Human player
+            if not aiTurn:
                 inp = input("Enter your input:").split()
                 if len(inp) == 3:
                     posX, posY = int(inp[0]), int(inp[1])
                     dir = inp[2]
-                    game.play(posX, posY, dir, player = 0)
+                    game.play(posX, posY, dir, player = playTurn)
+                    aiTurn = True
                 elif len(inp) == 7:
                     posX, posY, NposX, NposY, NewNposX, NewNposY = int(inp[0]), int(inp[1]), int(inp[3]), int(inp[4]), int(inp[5]), int(inp[6])
                     dir = inp[2]
                     #NposX, NposY, NewNposX, NewNposY = input
-                    game.play(posX, posY, dir, NposX, NposY, NewNposX, NewNposY, player = 0)
-            else:  # AI player
+                    game.play(posX, posY, dir, NposX, NposY, NewNposX, NewNposY, player = playTurn)
+                    aiTurn = True
+            # else:  # AI player
+            elif aiTurn:
+                print("CALCULATING... PLEASE WAIT...")
                 action = self.getAction(depth=2, player = self.turn)
                 if action:
                     self.play(*action, player = self.turn)
                     print(f"AI plays: {action}")
                     self.visualize()
+                    aiTurn = False
                 else:
                     print("AI has no moves left. You win!")
                     break
@@ -430,17 +388,88 @@ class gameState:
             # else:
             #     print(f"AI {self.turn + 1} has no moves left. AI {((self.turn + 1) % 2) + 1} wins!")
             #     break
+    def reset(self):
+        self.initialize()
 
+    def customize(self):
+            # inp = input("Would you like to move shape 1 first? Y or N?\n")
+            # if inp == 'Y' or inp == 'y':
+            #     self.turn = (self.turn + 1) % 2
+
+            while True:
+                possibleMoves = self.checkPossible()
+                possibleMovesLen = len(possibleMoves)
+                
+                print("Possible Moves:", possibleMoves, '\n', "Possible Moves:" , possibleMovesLen)
+                print("Player ", self.turn + 1, " turn: ")
+                self.visualize()
+                #input
+                inp = input("Enter your input:").split()
+                if len(inp) == 3:
+                    posX, posY = int(inp[0]), int(inp[1])
+                    dir = inp[2]
+                    self.play(posX, posY, dir)
+                elif len(inp) == 7:
+                    posX, posY, NposX, NposY, NewNposX, NewNposY = int(inp[0]), int(inp[1]), int(inp[3]), int(inp[4]), int(inp[5]), int(inp[6])
+                    dir = inp[2]
+                    #NposX, NposY, NewNposX, NewNposY = input
+                    self.play(posX, posY, dir, NposX, NposY, NewNposX, NewNposY)
+                
+                self.visualize()
+                print("Finished?")
+                finished = input("Y/N\n")
+                if finished == "Y" or finished == "y":
+                    self.turn = 0
+                    return False
 
 #init game state
 game = gameState()
 #game.visualize()
-#game.playHumanVsAI()
+# game.playHumanVsAI()
 #game.playGame()
-game.playAIVsAI()
+# game.playAIVsAI()
+
+def intro():
+    print("WELCOME TO OUR L GAME")
+
+def roundEnd():
+    print("\nPLAY ANOTHER ROUND? [Y/N]")
+    replay = input("[Y/N]\n")
+
+    if replay == "Y" or replay == "y":
+        game.reset() # new gamestate!
+        gameplay()
+    elif replay == "N" or replay == "n":
+        pass
+    else:
+        print("INVALID INPUT")
+        roundEnd()
+
+def customBoard():
+    game.customize()
+    gameplay()
+
+def gameplay():
+    print("CHOOSE YOUR DIFFICULTY")
+
+    inp = input ("| 1 = PvP || 2 = PvAI || 3 = AIvAI || 4 = Custom Board |\n")
+
+    if int(inp) == 1:
+        game.playGame()
+    elif int(inp) == 2:
+        game.playHumanVsAI()
+    elif int(inp) == 3:
+        game.playAIVsAI()
+    elif int(inp) == 4:
+        customBoard()
+        pass
+    else:
+        print("INVALID INPUT - TRY AGAIN\n")
+        gameplay()
+    
+    roundEnd()
+    
 
 
-#To lose we play
-# 3 4 N 1 1 3 1
-# 1 1 E 3 1 1 4
-
+intro()
+gameplay()
